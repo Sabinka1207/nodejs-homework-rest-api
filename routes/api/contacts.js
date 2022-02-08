@@ -2,12 +2,13 @@
 const express = require("express");
 const createError = require("http-errors");
 const Contact = require("../../models/contact");
-
+const { authenticate } = require("../../middlewares/authentificate");
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/", authenticate, async (req, res, next) => {
   try {
-    const contacts = await Contact.find();
+    const { _id } = req.user;
+    const contacts = await Contact.find({ owner: _id }).populate("owner");
     if (!contacts) {
       throw new createError(404, "Not found");
     }
@@ -30,9 +31,11 @@ router.get("/:contactId", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
-    const addedContact = await Contact.create(req.body);
+    console.log(req.body);
+    const data = { ...req.body, owner: req.user._id };
+    const addedContact = await Contact.create(data);
     res.status(201).json(addedContact);
   } catch (error) {
     if (error.message.includes("validation failed")) {
